@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using WorkoutApi.Data;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
@@ -21,18 +21,17 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 // Обслуживание статических файлов из папки клиента
+var clientWwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "WorkoutApp", "wwwroot");
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "../WorkoutApp/wwwroot")),
+    FileProvider = new PhysicalFileProvider(clientWwwrootPath),
     RequestPath = ""
 });
 
 app.MapControllers();
 app.MapFallbackToFile("index.html", new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "../WorkoutApp/wwwroot"))
+    FileProvider = new PhysicalFileProvider(clientWwwrootPath)
 });
 
 using (var scope = app.Services.CreateScope())
