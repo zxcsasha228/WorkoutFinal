@@ -3,7 +3,9 @@ using WorkoutApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Добавляем контекст базы данных
+// Явно указываем порт 5000
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
