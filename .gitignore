@@ -1,1 +1,22 @@
+# Результаты сборки .NET
+[Bb]in/
+[Oo]bj/
+packages/
 
+# Настройки Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Настройки JetBrains Rider
+.idea/
+
+# Временные файлы и логи
+*.log
+*.tmp
+*.temp
+
+# Конфигурация, которую будем задавать вручную на сервере
+appsettings.Production.json
