@@ -1,0 +1,208 @@
+@page "/admin"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@if (isLoading)
+{
+    <p>Загрузка...</p>
+}
+else if (!isAuthenticated)
+{
+    <div class="alert alert-warning">
+        <h4>Необходимо войти в систему</h4>
+        <a href="/login" class="btn btn-primary">Войти</a>
+    </div>
+}
+else if (!isAdmin)
+{
+    <div class="alert alert-warning">
+        <h4>Вход в админ-панель</h4>
+        <p>Введите пароль администратора для доступа</p>
+        <div class="mb-3">
+            <input type="password" @bind="adminPassword" class="form-control" placeholder="Пароль" />
+        </div>
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="alert alert-danger">@error</div>
+        }
+        <button class="btn btn-primary" @onclick="CheckAdminPassword" disabled="@isChecking">
+            @if (isChecking)
+            {
+                <span>Проверка...</span>
+            }
+            else
+            {
+                <span>Войти как админ</span>
+            }
+        </button>
+    </div>
+}
+else
+{
+    <h3>Админ-панель</h3>
+
+    @if (isLoadingUsers)
+    {
+        <p>Загрузка пользователей...</p>
+    }
+    else if (users == null || users.Count == 0)
+    {
+        <div class="alert alert-info">
+            Пользователи не найдены
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5>Список пользователей (@users.Count)</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Имя</th>
+                            <th>Фамилия</th>
+                            <th>Email</th>
+                            <th>Дата регистрации</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in users)
+                        {
+                            <tr>
+                                <td>@user.id</td>
+                                <td>@user.firstName</td>
+                                <td>@user.lastName</td>
+                                <td>@user.email</td>
+                                <td>@user.registrationDate</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <button class="btn btn-danger mt-3" @onclick="Logout">🚪 Выйти из админки</button>
+    <button class="btn btn-secondary mt-3 ms-2" @onclick="GoBack">◀ Назад</button>
+}
+
+@code {
+    private List<UserAdmin>? users;
+    private bool isLoading = true;
+    private bool isLoadingUsers = false;
+    private bool isAuthenticated = false;
+    private bool isAdmin = false;
+    private string adminPassword = "";
+    private string? error;
+    private bool isChecking = false;
+    private const string AdminPasswordConst = "1";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuth();
+        if (isAdmin)
+        {
+            await LoadUsers();
+        }
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && isAdmin && users == null)
+        {
+            await LoadUsers();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CheckAuth()
+    {
+        try
+        {
+            var savedUserJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUser");
+            isAuthenticated = !string.IsNullOrEmpty(savedUserJson);
+            
+            var adminStatus = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "isAdmin");
+            isAdmin = adminStatus == "true";
+        }
+        catch
+        {
+            isAuthenticated = false;
+            isAdmin = false;
+        }
+    }
+
+    private async Task CheckAdminPassword()
+    {
+        if (isChecking) return;
+        
+        isChecking = true;
+        error = null;
+
+        try
+        {
+            await Task.Delay(500); // Имитация проверки
+            
+            if (adminPassword == AdminPasswordConst)
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "isAdmin", "true");
+                isAdmin = true;
+                await LoadUsers();
+                StateHasChanged();
+            }
+            else
+            {
+                error = "Неверный пароль";
+            }
+        }
+        finally
+        {
+            isChecking = false;
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        isLoadingUsers = true;
+        StateHasChanged();
+
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<UserAdmin>>("http://localhost:5097/api/admin/users");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки пользователей: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingUsers = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Logout()
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "isAdmin");
+        Navigation.NavigateTo("/", true);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    class UserAdmin
+    {
+        public int id { get; set; }
+        public string email { get; set; } = "";
+        public string firstName { get; set; } = "";
+        public string lastName { get; set; } = "";
+        public string registrationDate { get; set; } = "";
+    }
+}

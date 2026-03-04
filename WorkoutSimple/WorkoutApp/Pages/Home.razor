@@ -1,0 +1,89 @@
+﻿@page "/"
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@if (isLoading)
+{
+    <p>Загрузка...</p>
+}
+else if (!isAuthenticated)
+{
+    Navigation.NavigateTo("/register");
+}
+else
+{
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Workout Tracker</h1>
+        
+        <p class="text-center lead mb-5">Добро пожаловать, @userName!</p>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">📋 Тренировки</h5>
+                        <p class="card-text text-muted">Просмотр и создание тренировок</p>
+                        <a href="/workouts" class="btn btn-primary">Перейти</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">📚 Библиотека</h5>
+                        <p class="card-text text-muted">Упражнения для тренировок</p>
+                        <a href="/library" class="btn btn-primary">Перейти</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">👤 Профиль</h5>
+                        <p class="card-text text-muted">Ваши данные и статистика</p>
+                        <a href="/profile" class="btn btn-primary">Перейти</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private string userName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuth();
+        isLoading = false;
+    }
+
+    private async Task CheckAuth()
+    {
+        try
+        {
+            var savedUserJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUser");
+            isAuthenticated = !string.IsNullOrEmpty(savedUserJson);
+            
+            if (isAuthenticated && !string.IsNullOrEmpty(savedUserJson))
+            {
+                var user = System.Text.Json.JsonSerializer.Deserialize<UserInfo>(savedUserJson);
+                userName = $"{user?.FirstName} {user?.LastName}";
+            }
+        }
+        catch
+        {
+            isAuthenticated = false;
+        }
+    }
+
+    class UserInfo
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+    }
+}

@@ -1,0 +1,118 @@
+@page "/register"
+@using System.Text.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<h3>Регистрация</h3>
+
+<div class="mb-3">
+    <label>Имя:</label>
+    <input @bind="firstName" class="form-control" />
+</div>
+<div class="mb-3">
+    <label>Фамилия:</label>
+    <input @bind="lastName" class="form-control" />
+</div>
+<div class="mb-3">
+    <label>Email:</label>
+    <input @bind="email" class="form-control" />
+</div>
+<div class="mb-3">
+    <label>Пароль:</label>
+    <input type="password" @bind="password" class="form-control" />
+</div>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-success">@message</div>
+}
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<button class="btn btn-primary" @onclick="HandleRegister">Зарегистрироваться</button>
+<a href="/login" class="btn btn-link">Уже есть аккаунт?</a>
+
+@code {
+    private string firstName = "";
+    private string lastName = "";
+    private string email = "";
+    private string password = "";
+    private string? message;
+    private string? error;
+
+    private async Task HandleRegister()
+    {
+        try
+        {
+            var registerData = new
+            {
+                firstName = firstName,
+                lastName = lastName,
+                email = email,
+                password = password
+            };
+
+            var response = await Http.PostAsJsonAsync("http://localhost:5097/api/auth/register", registerData);
+            var result = await response.Content.ReadFromJsonAsync<RegisterResponse>();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                message = result?.message;
+                error = null;
+                
+                // Автоматически логиним пользователя
+                var loginData = new
+                {
+                    email = email,
+                    password = password
+                };
+                
+                var loginResponse = await Http.PostAsJsonAsync("http://localhost:5097/api/auth/login", loginData);
+                var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+                
+                if (loginResponse.IsSuccessStatusCode && loginResult?.user != null)
+                {
+                    var userJson = JsonSerializer.Serialize(loginResult.user);
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentUser", userJson);
+                }
+                
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/profile");
+            }
+            else
+            {
+                error = result?.message ?? "Ошибка регистрации";
+                message = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Ошибка: {ex.Message}";
+        }
+
+        await Task.Delay(2000);
+Navigation.NavigateTo("/");
+    }
+
+    class RegisterResponse
+    {
+        public string message { get; set; } = "";
+    }
+
+    class LoginResponse
+    {
+        public string message { get; set; } = "";
+        public UserInfo? user { get; set; }
+    }
+
+    class UserInfo
+    {
+        public int Id { get; set; }
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+    }
+}

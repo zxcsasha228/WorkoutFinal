@@ -1,0 +1,120 @@
+@page "/profile"
+@using System.Text.Json
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<h3>Профиль пользователя</h3>
+
+@if (isLoading)
+{
+    <p>Загрузка...</p>
+}
+else if (user == null)
+{
+    <div class="alert alert-warning">
+        <p>Необходимо войти в систему</p>
+        <a href="/login" class="btn btn-primary">Войти</a>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5>Личные данные</h5>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <tr>
+                    <th>Имя:</th>
+                    <td>@user.FirstName @user.LastName</td>
+                </tr>
+                <tr>
+                    <th>Email:</th>
+                    <td>@user.Email</td>
+                </tr>
+                <tr>
+                    <th>Дата регистрации:</th>
+                    <td>@user.RegistrationDate</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header bg-success text-white">
+            <h5>Статистика</h5>
+        </div>
+        <div class="card-body">
+            <p>Всего тренировок: 0</p>
+            <p>Всего упражнений: 0</p>
+            <p>Последняя тренировка: -</p>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <button class="btn btn-danger" @onclick="Logout">🚪 Выйти</button>
+        <button class="btn btn-secondary ms-2" @onclick="GoBack">◀ Назад</button>
+    </div>
+}
+
+@code {
+    private UserProfile? user;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+    }
+
+    private async Task LoadUserProfile()
+    {
+        try
+        {
+            // Получаем данные пользователя из localStorage
+            var savedUserJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUser");
+            
+            if (!string.IsNullOrEmpty(savedUserJson))
+            {
+                user = JsonSerializer.Deserialize<UserProfile>(savedUserJson);
+                
+                // Форматируем дату для отображения
+                if (user?.RegistrationDate != null)
+                {
+                    var date = DateTime.Parse(user.RegistrationDate);
+                    user.RegistrationDate = date.ToString("dd.MM.yyyy HH:mm");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки профиля: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Logout()
+    {
+        // Удаляем данные пользователя из localStorage
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "currentUser");
+        
+        // Перенаправляем на страницу входа
+        Navigation.NavigateTo("/login", true);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    class UserProfile
+    {
+        public int Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string RegistrationDate { get; set; } = "";
+    }
+}

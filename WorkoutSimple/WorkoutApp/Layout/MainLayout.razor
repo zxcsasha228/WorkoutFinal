@@ -1,0 +1,18 @@
+﻿@inherits LayoutComponentBase
+@using WorkoutApp.Shared
+
+<div class="page">
+    <div class="sidebar" style="background-color: #ffffff; border-right: 1px solid #dee2e6;">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4" style="background-color: #f8f9fa;">
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank" class="text-dark">About</a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
